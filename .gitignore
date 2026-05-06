@@ -1,5 +1,5 @@
-# Ignore large data files (GitHub 100MB limit)
-*.parquet
+# Ignore ONLY large data files (>100MB)
+nq_continuous_1m_features*.parquet
 *.csv
 
 # Python
