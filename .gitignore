@@ -1,5 +1,5 @@
 # Ignore ONLY large data files (>100MB)
-nq_continuous_1m_features*.parquet
+*.parquet
 *.csv
 
 # Python
