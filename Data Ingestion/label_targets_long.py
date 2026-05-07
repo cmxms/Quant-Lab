@@ -35,7 +35,7 @@ except ImportError:
 
 
 @njit(fastmath=True)
-def compute_triple_barrier(close_prices, high_prices, low_prices, atr_norm, lookahead=30, upper_mult=2.0, lower_mult=1.5):
+def compute_triple_barrier(close_prices, high_prices, low_prices, atr_norm, lookahead=30, upper_mult=6.0, lower_mult=4.0):
     n = len(close_prices)
     targets = np.zeros(n, dtype=np.int8)
     
@@ -87,8 +87,8 @@ def main():
     parser.add_argument("--input", type=str, required=True, help="Path to the input .parquet file.")
     parser.add_argument("--output", type=str, required=True, help="Path to save the output labeled .parquet file.")
     parser.add_argument("--lookahead", type=int, default=30, help="Forward-looking window in rows (default: 30).")
-    parser.add_argument("--upper_mult", type=float, default=2.0, help="Multiplier for the Upper Barrier (default: 2.0).")
-    parser.add_argument("--lower_mult", type=float, default=1.5, help="Multiplier for the Lower Barrier (default: 1.5).")
+    parser.add_argument("--upper_mult", type=float, default=6.0, help="Multiplier for the Upper Barrier (default: 6.0).")
+    parser.add_argument("--lower_mult", type=float, default=4.0, help="Multiplier for the Lower Barrier (default: 4.0).")
     
     args = parser.parse_args()
 

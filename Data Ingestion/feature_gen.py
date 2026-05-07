@@ -136,21 +136,45 @@ def main():
     # 12-14. Context / Regime Features
     adx_col = [c for c in df.columns if 'ADX' in c and 'ADXR' not in c][0]
     df['ADX_14'] = df[adx_col]
-    
+
     # Minutes from Open (9:30 AM local time for index, which is EST/EDT)
     market_open = df.index.floor('D') + pd.Timedelta(hours=9, minutes=30)
     df['Minutes_From_Open'] = ((df.index - market_open).total_seconds() // 60).astype(int)
-    
+
     df['Day_Of_Week'] = df.index.dayofweek
+
+    # --- Regime State Features ---
+
+    # 15. Trend Acceleration: 3-period difference of ADX_14.
+    #     Positive = trend strengthening, Negative = trend fading.
+    #     Uses .diff(3) which is strictly backward-looking (no lookahead).
+    df['ADX_Slope_3'] = df['ADX_14'].diff(3)
+
+    # 16. Macro Liquidity: 60-bar Relative Volume.
+    #     Baseline = rolling mean of 60-bar rolling volume sums over the last
+    #     7200 bars (~5 full trading days of 1m data). min_periods guards
+    #     the early rows. Everything is backward-looking — no lookahead.
+    _vol_60 = df['Volume'].rolling(window=60, min_periods=60).sum()
+    _vol_60_baseline = _vol_60.rolling(window=7200, min_periods=390).mean()
+    df['RVOL_60m'] = _vol_60 / _vol_60_baseline
+
+    # 17. Chop Regime: 10-bar SMA of candle body efficiency.
+    #     Body / (High - Low + epsilon) → 1.0 = pure trend candle, ~0 = doji/chop.
+    #     Rolling mean is strictly backward-looking.
+    _epsilon = 1e-9
+    _body_ratio = (df['Close'] - df['Open']).abs() / (df['High'] - df['Low'] + _epsilon)
+    df['Body_Wick_Ratio_10'] = _body_ratio.rolling(window=10, min_periods=10).mean()
     
     # --- Final Cleanup ---
     
     features_to_keep = [
-        'Open', 'High', 'Low', 'Close', 'Volume', 
+        'Open', 'High', 'Low', 'Close', 'Volume',
         '9EMA_Dist', '200EMA_Dist', 'EMA_Spread', 'VWAP_Dist',
         'RSI_14', 'WillR_14', 'MACD_Hist_Norm', 'Rolling_15m_Return',
         'BB_PctB', 'ATR_Norm', 'RVOL',
-        'ADX_14', 'Minutes_From_Open', 'Day_Of_Week'
+        'ADX_14', 'Minutes_From_Open', 'Day_Of_Week',
+        # Regime State features
+        'ADX_Slope_3', 'RVOL_60m', 'Body_Wick_Ratio_10',
     ]
     
     df = df[features_to_keep]

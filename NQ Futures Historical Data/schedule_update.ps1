@@ -9,7 +9,7 @@ Write-Host "Registering scheduled task for NQ Data Update..."
 Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 
 # Create Action with Working Directory set to the script folder
-$Action = New-ScheduledTaskAction -Execute $ActionExecutable -Argument $ActionScript -WorkingDirectory (Split-Path $ActionScript -Parent)
+$Action = New-ScheduledTaskAction -Execute $ActionExecutable -Argument "`"$ActionScript`"" -WorkingDirectory (Split-Path $ActionScript -Parent)
 
 # Create Trigger (Daily at 8am)
 $Trigger = New-ScheduledTaskTrigger -Daily -At $TriggerTime
