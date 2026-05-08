@@ -19,7 +19,7 @@ def main():
 
     print("Cleaning and filtering symbols...")
     # Keep only outright contracts (e.g. NQM1, NQZ4). Ignore spreads like NQM1-NQU1 or NQ=F
-    df = df[df['symbol'].str.match(r'^NQ[HMUZ]\d+$', na=False)].copy()
+    df = df[df['symbol'].str.match(r'^NQ([HMUZ]\d+|=F)$', na=False)].copy()
     
     # Identify datetime column
     datetime_cols = [c for c in df.columns if c.lower() in ['ts_event', 'ts', 'date', 'datetime', 'timestamp', 'time']]

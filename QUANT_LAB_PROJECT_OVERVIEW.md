@@ -9,9 +9,10 @@ This document provides a comprehensive breakdown of the NQ futures quantitative 
 
 The system operates as a modular "factory" pipeline where raw market data is transformed into audited trading signals.
 
-1.  **Data Ingestion (`update_nq_data.py`)**: 
-    *   Ingests raw 1-minute OHLCV data for NQ futures.
-    *   Maintains a continuous, back-adjusted series across contract rollovers.
+1.  **Data Ingestion (`update_and_stitch.py`)**: 
+    *   **Automated Pipeline**: Coordinates `update_nq_data.py` (located in `Data Ingestion/Raw/`) and `rollover_stitch.py` (Continuous EST).
+    *   **Raw Data Management**: Centralizes all master Parquet source files and daily update scripts within the `Data Ingestion/Raw/` directory.
+    *   **Synchronization**: Automatically appends Yahoo Finance data (`NQ=F`) to the master Databento series, handles back-adjustments, and synchronizes both the raw and continuous datasets daily.
 2.  **Feature Generation (`feature_gen.py`)**: 
     *   Calculates 14+ stationary technical indicators (RSI, MACD, Bollinger, etc.).
     *   **Regime State Logic**: Engineers macro-context features like `RVOL_60m` (liquidity) and `Body_Wick_Ratio_10` (chop filter) to help the model distinguish between trend and mean-reversion environments.

@@ -81,15 +81,28 @@ def main():
         print(f"{Colors.YELLOW}[*] Downsampling MI Train data from {len(mi_train):,} to 200,000 rows...{Colors.RESET}")
         mi_train = mi_train.sample(n=200000, random_state=42)
     
-    # Isolate features (ignoring Target, Open, High, Low, Close, Volume, and datetime)
-    ignore_cols = ['Open', 'High', 'Low', 'Close', 'Volume', 'Target', 'datetime']
-    features = [c for c in mi_train.columns if c not in ignore_cols and pd.api.types.is_numeric_dtype(mi_train[c])]
+    # Drop Data Leakage Meta Columns from all datasets before processing
+    leakage_cols = ['rtype', 'publisher_id', 'instrument_id', 'symbol']
+    for c in leakage_cols:
+        if c in train_df.columns:
+            train_df.drop(columns=[c], inplace=True)
+            val_df.drop(columns=[c], inplace=True)
+            holdout_df.drop(columns=[c], inplace=True)
+            if c in mi_train.columns:
+                mi_train.drop(columns=[c], inplace=True)
+                
+    # Isolate features (ignoring Target, OHLCV, and datetime)
+    ignore_cols = ['open', 'high', 'low', 'close', 'volume', 'target', 'datetime', 'ts_event']
+    # Case-insensitive check
+    features = [c for c in mi_train.columns if c.lower() not in ignore_cols and pd.api.types.is_numeric_dtype(mi_train[c])]
     
-    if 'Target' not in mi_train.columns:
+    # Check for Target (which is case sensitive in our DF)
+    target_col = 'Target' if 'Target' in mi_train.columns else 'target'
+    if target_col not in mi_train.columns:
         raise ValueError("Error: 'Target' column not found in the dataset.")
         
     X = mi_train[features]
-    y = mi_train['Target'].astype(int) # Ensure integer classification target
+    y = mi_train[target_col].astype(int) # Ensure integer classification target
     
     print(f"{Colors.YELLOW}[*] Calculating MI Scores on {len(features)} features...{Colors.RESET}")
     mi_scores = mutual_info_classif(X, y, random_state=42)

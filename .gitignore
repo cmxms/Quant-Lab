@@ -1,6 +1,8 @@
 # Ignore ONLY large data files (>100MB)
 *.parquet
 *.csv
+*.joblib
+*.png
 
 # Python
 __pycache__/

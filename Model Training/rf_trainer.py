@@ -45,7 +45,7 @@ _FEATURE_OUTPUT_DIR = _HERE.parent / "Feature Engineering" / "Outputs"
 _MODEL_OUTPUT_DIR = _HERE / "Outputs"
 
 TARGET_COL: str = "Target"
-DROP_COLS: list = ["Open", "High", "Low", "Close", "Volume", "Minutes_From_Open", "Day_Of_Week"]
+DROP_COLS: list = ["Open", "High", "Low", "Close", "Volume", "Minutes_From_Open", "Day_Of_Week", "datetime", "ts_event"]
 
 RF_PARAMS: dict = {
     "n_estimators": 300,
@@ -191,7 +191,18 @@ def main() -> None:
         default=None,
         help="Override: explicit path to the validation .parquet file.",
     )
+    parser.add_argument(
+        "--prefix",
+        type=str,
+        default="",
+        help="Regime prefix for file discovery and output naming (e.g. 'day_shift').",
+    )
     args = parser.parse_args()
+
+    prefix = args.prefix
+    train_substr = f"{prefix}_clean_train" if prefix else "train"
+    val_substr   = f"{prefix}_clean_val" if prefix else "val"
+    file_prefix  = f"{prefix}_" if prefix else ""
 
     log.info("")
     _section("RF Trainer  -  Quantitative Trading Pipeline  |  Phase 3")
@@ -204,8 +215,8 @@ def main() -> None:
         train_file = args.train_path
         log.info(f"  Train file  : [CLI override] {train_file}")
     else:
-        log.info(f"  Scanning for 'train' parquet in: {_FEATURE_OUTPUT_DIR}")
-        train_file = _discover_file(_FEATURE_OUTPUT_DIR, "train")
+        log.info(f"  Scanning for '{train_substr}' parquet in: {_FEATURE_OUTPUT_DIR}")
+        train_file = _discover_file(_FEATURE_OUTPUT_DIR, train_substr)
         log.info(f"  Train file  : [auto-discovered] {train_file.name}")
 
     # Resolve val file: CLI override takes priority, else auto-discover
@@ -213,8 +224,8 @@ def main() -> None:
         val_file = args.val_path
         log.info(f"  Val file    : [CLI override] {val_file}")
     else:
-        log.info(f"  Scanning for 'val' parquet in: {_FEATURE_OUTPUT_DIR}")
-        val_file = _discover_file(_FEATURE_OUTPUT_DIR, "val")
+        log.info(f"  Scanning for '{val_substr}' parquet in: {_FEATURE_OUTPUT_DIR}")
+        val_file = _discover_file(_FEATURE_OUTPUT_DIR, val_substr)
         log.info(f"  Val file    : [auto-discovered] {val_file.name}")
 
     df_train = _load_parquet(train_file, "Train")
@@ -243,7 +254,13 @@ def main() -> None:
 
     # ── 4. Evaluate on Validation Set ────────────────────────────────────────
     _section("Step 4 / 4  -  Evaluation Results  (Validation Set)")
-    y_pred = model.predict(X_val)
+    # Output probability distributions for the ensemble
+    probas = model.predict_proba(X_val)
+    log.info(f"  Generated probability distribution matrix of shape: {probas.shape}")
+    
+    # Derive hard classifications for local evaluation metrics
+    classes = model.classes_
+    y_pred = classes[np.argmax(probas, axis=1)]
 
     classes = np.sort(np.unique(y_val))
     avg_method = "weighted"
@@ -279,7 +296,7 @@ def main() -> None:
     _MODEL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    model_filename = f"rf_model_{timestamp}.joblib"
+    model_filename = f"{file_prefix}rf_model_{timestamp}.joblib"
     model_path = _MODEL_OUTPUT_DIR / model_filename
     
     joblib.dump(model, model_path)
